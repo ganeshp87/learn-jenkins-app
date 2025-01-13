@@ -76,7 +76,7 @@ pipeline {
                             keepAll: true,
                             reportDir: 'playwright-report',
                             reportFiles: 'index.html',
-                            reportName: 'Playwright HTML Report',
+                            reportName: 'Playwright Local Report',
                             useWrapperFileDirectly: true // This allows direct access to the report
                         ])
                     }
@@ -103,5 +103,40 @@ pipeline {
                 '''
             }
         }
+
+        stage('Prod E2E'){
+                agent{
+                    docker{
+                        image 'mcr.microsoft.com/playwright:v1.49.1-noble'
+                        reuseNode true
+                    }
+                }
+                environment{
+                    //check playwright.config.js for below variable
+                    CI_ENVIRONMENT_URL='https://ganeshp1.netlify.app'
+                  
+                }
+
+                steps{
+                    sh '''
+                        npx playwright test --reporter=html
+                    '''
+                }
+
+                post {
+                    always {
+                    
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: 'playwright-report',
+                            reportFiles: 'index.html',
+                            reportName: 'Playwright E2E Report',
+                            useWrapperFileDirectly: true // This allows direct access to the report
+                        ])
+                    }
+                }
+             }
   }  
 }
