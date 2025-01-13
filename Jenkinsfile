@@ -125,7 +125,7 @@ pipeline {
                 }
             }
             environment {
-                CI_ENVIRONMENT_URL = 'https://ganeshp1.netlify.app' // Check playwright.config.js for usage
+                CI_ENVIRONMENT_URL = 'https://ganeshp1.netlify.app'
             }
             steps {
                 sh '''
