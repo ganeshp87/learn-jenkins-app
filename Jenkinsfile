@@ -89,16 +89,16 @@ pipeline {
                 }
             }
             steps {
-                sh '''
-                    npm install netlify-cli node-jq
-                    node_modules/.bin/netlify --version
-                    echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
-                    node_modules/.bin/netlify status
-                    node_modules/.bin/netlify deploy --dir=build
-                    node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
-                    node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json
-                '''
-                script {
+        script {
+            sh '''
+                npm install netlify-cli node-jq
+                node_modules/.bin/netlify --version
+                echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
+                node_modules/.bin/netlify status
+                node_modules/.bin/netlify deploy --dir=build
+                node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
+            '''
+            
             // Capture deploy URL and assign it to STAGING_URL
             env.STAGING_URL = sh(
                 script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json",
@@ -107,8 +107,18 @@ pipeline {
 
             // Print the captured URL for debugging
             echo "Staging URL: ${env.STAGING_URL}"
+
+            // Wait until the staging site is live
+            sh '''
+                echo "Waiting for staging site to be live at ${env.STAGING_URL}..."
+                until curl -s -o /dev/null -w "%{http_code}" ${env.STAGING_URL} | grep 200; do
+                    echo "Still waiting for ${env.STAGING_URL}..."
+                    sleep 5
+                done
+                echo "Staging site is live!"
+            '''
         }
-            }
+    }
         }
 
         stage('Staging E2E') {
