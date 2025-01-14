@@ -107,27 +107,6 @@ pipeline {
 
                     // Print the captured URL for debugging
                     echo "Staging URL: ${env.STAGING_URL}"
-
-                    // Wait until the staging site is live
-                    sh """
-                        echo "Waiting for staging site to be live at $STAGING_URL..."
-                        START_TIME=\$(date +%s)
-                        TIMEOUT=300 # 5 minutes
-                        while :; do
-                            if curl -s -o /dev/null -w "%{http_code}" $STAGING_URL | grep -q 200; then
-                                echo "Staging site is live!"
-                                break
-                            fi
-                            CURRENT_TIME=\$(date +%s)
-                            ELAPSED_TIME=\$((CURRENT_TIME - START_TIME))
-                            if [ \$ELAPSED_TIME -gt \$TIMEOUT ]; then
-                                echo "Timed out waiting for $STAGING_URL to be live."
-                                exit 1
-                            fi
-                            echo "Still waiting for $STAGING_URL..."
-                            sleep 5
-                        done
-                    """
                 }
             }
         }
