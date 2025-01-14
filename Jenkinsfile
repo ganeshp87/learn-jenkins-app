@@ -89,36 +89,47 @@ pipeline {
                 }
             }
             steps {
-        script {
-            sh '''
-                npm install netlify-cli node-jq
-                node_modules/.bin/netlify --version
-                echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
-                node_modules/.bin/netlify status
-                node_modules/.bin/netlify deploy --dir=build
-                node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
-            '''
-            
-            // Capture deploy URL and assign it to STAGING_URL
-            env.STAGING_URL = sh(
-                script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json",
-                returnStdout: true
-            ).trim()
+                script {
+                    sh '''
+                        npm install netlify-cli node-jq
+                        node_modules/.bin/netlify --version
+                        echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
+                        node_modules/.bin/netlify status
+                        node_modules/.bin/netlify deploy --dir=build
+                        node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
+                    '''
+                    
+                    // Capture deploy URL and assign it to STAGING_URL
+                    env.STAGING_URL = sh(
+                        script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json",
+                        returnStdout: true
+                    ).trim()
 
-            // Print the captured URL for debugging
-            echo "Staging URL: ${env.STAGING_URL}"
+                    // Print the captured URL for debugging
+                    echo "Staging URL: ${env.STAGING_URL}"
 
-            // Wait until the staging site is live
-            sh '''
-                echo "Waiting for staging site to be live at ${env.STAGING_URL}..."
-                until curl -s -o /dev/null -w "%{http_code}" ${env.STAGING_URL} | grep 200; do
-                    echo "Still waiting for ${env.STAGING_URL}..."
-                    sleep 5
-                done
-                echo "Staging site is live!"
-            '''
-        }
-    }
+                    // Wait until the staging site is live
+                    sh """
+                        echo "Waiting for staging site to be live at $STAGING_URL..."
+                        START_TIME=\$(date +%s)
+                        TIMEOUT=300 # 5 minutes
+                        while :; do
+                            if curl -s -o /dev/null -w "%{http_code}" $STAGING_URL | grep -q 200; then
+                                echo "Staging site is live!"
+                                break
+                            fi
+                            CURRENT_TIME=\$(date +%s)
+                            ELAPSED_TIME=\$((CURRENT_TIME - START_TIME))
+                            if [ \$ELAPSED_TIME -gt \$TIMEOUT ]; then
+                                echo "Timed out waiting for $STAGING_URL to be live."
+                                exit 1
+                            fi
+                            echo "Still waiting for $STAGING_URL..."
+                            sleep 5
+                        done
+                    """
+                }
+            }
         }
 
         stage('Staging E2E') {
@@ -132,9 +143,11 @@ pipeline {
                 CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
             }
             steps {
-                sh '''
-                    npx playwright test --reporter=html
-                '''
+                withEnv(["CI_ENVIRONMENT_URL=${env.STAGING_URL}"]) {
+                    sh '''
+                        npx playwright test --reporter=html
+                    '''
+                }
             }
             post {
                 always {
@@ -151,15 +164,13 @@ pipeline {
             }
         }
 
-         stage('Approval') {
-           
+        stage('Approval') {
             steps {
-                 timeout(time: 15, unit: 'MINUTES') {
-                      input message: 'Ready to deploy?', ok: 'Yes, I am sure I want to deploy.'
+                timeout(time: 15, unit: 'MINUTES') {
+                    input message: 'Ready to deploy?', ok: 'Yes, I am sure I want to deploy.'
                 }
             }
         }
-
 
         stage('Deploy Prod') {
             agent {
@@ -190,9 +201,11 @@ pipeline {
                 CI_ENVIRONMENT_URL = 'https://ganeshp1.netlify.app'
             }
             steps {
-                sh '''
-                    npx playwright test --reporter=html
-                '''
+                withEnv(["CI_ENVIRONMENT_URL=${env.CI_ENVIRONMENT_URL}"]) {
+                    sh '''
+                        npx playwright test --reporter=html
+                    '''
+                }
             }
             post {
                 always {
