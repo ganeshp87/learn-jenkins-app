@@ -81,37 +81,7 @@ pipeline {
             }
         }
 
-        stage('Deploy staging') {
-            agent {
-                docker {
-                    image 'node:18-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                script {
-                    sh '''
-                        npm install netlify-cli node-jq
-                        node_modules/.bin/netlify --version
-                        echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
-                        node_modules/.bin/netlify status
-                        node_modules/.bin/netlify deploy --dir=build
-                        node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
-                    '''
-                    
-                    // Capture deploy URL and assign it to STAGING_URL
-                    env.STAGING_URL = sh(
-                        script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json",
-                        returnStdout: true
-                    ).trim()
-
-                    // Print the captured URL for debugging
-                    echo "Staging URL: ${env.STAGING_URL}"
-                }
-            }
-        }
-
-        stage('Staging E2E') {
+        stage('Deploy Staging') {
             agent {
                 docker {
                     image 'mcr.microsoft.com/playwright:v1.49.1-noble'
@@ -119,10 +89,17 @@ pipeline {
                 }
             }
             environment {
-                CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
+                CI_ENVIRONMENT_URL = 'STAGING_URL_TO_BE_SET'
             }
             steps {
                 sh '''
+                    npm install netlify-cli node-jq
+                    node_modules/.bin/netlify --version
+                    echo "Deploying to staging. Site ID: $NETLIFY_SITE_ID"
+                    node_modules/.bin/netlify status
+                    node_modules/.bin/netlify deploy --dir=build
+                    node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
+                    CI_ENVIRONMENT_URL=$(node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json)
                     npx playwright test  --reporter=html
                 '''
             }
@@ -148,7 +125,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy Prod') {
             agent {
                 docker {
