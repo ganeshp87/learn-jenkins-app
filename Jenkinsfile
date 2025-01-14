@@ -99,8 +99,15 @@ pipeline {
                     node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json
                 '''
                 script {
-                    env.STAGING_URL = sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json", returnStdout: true)
-                }
+            // Capture deploy URL and assign it to STAGING_URL
+            env.STAGING_URL = sh(
+                script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json",
+                returnStdout: true
+            ).trim()
+
+            // Print the captured URL for debugging
+            echo "Staging URL: ${env.STAGING_URL}"
+        }
             }
         }
 
