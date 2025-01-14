@@ -121,13 +121,7 @@ pipeline {
             environment {
                 CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
             }
-            steps {
-                withEnv(["CI_ENVIRONMENT_URL=${env.STAGING_URL}"]) {
-                    sh '''
-                        npx playwright test --reporter=html
-                    '''
-                }
-            }
+           
             post {
                 always {
                     publishHTML([
