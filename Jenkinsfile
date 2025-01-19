@@ -5,7 +5,7 @@ pipeline {
         REACT_APP_VERSION = "1.0.$BUILD_ID"
         AWS_DEFAULT_REGION = 'eu-west-2'
         AWS_ECS_CLUSTER = 'LearnJenkinsApp-Cluster-Prodd'
-        AWS_ECS_SERVICE_PROD = 'LearnJenkinsApp-Service-Prod'
+        AWS_ECS_SERVICE_PROD = 'LearnJenksinApp-Service-Prod'
         AWS_ECS_TD_PROD = 'LearnJenkinsApp-TaskDefinition-Prod'
     }
 
